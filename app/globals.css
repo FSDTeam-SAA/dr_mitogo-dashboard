@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Map CSS variables to Tailwind theme tokens */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+/* Base design tokens – LIGHT MODE ONLY */
+@layer base {
+  :root {
+    --background: hsl(0 0% 100%);
+    --foreground: hsl(240 10% 3.9%);
+
+    --primary: #A90503;              /* 🔴 your primary color */
+    --primary-foreground: hsl(0 0% 100%);
+
+    --border: hsl(0 0% 90%);
+    --ring: #A90503;
+
+    --radius: 0.6rem;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background: linear-gradient(180deg, #ffe7e6 0%, #ffffff 24.6%);
+  }
+}
