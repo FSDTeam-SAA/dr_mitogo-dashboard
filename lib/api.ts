@@ -1,465 +1,654 @@
-// Replace these with real API calls as needed
+import { getSession } from "next-auth/react"
 
 export interface User {
-  id: string
-  username: string
-  email: string
-  status: "active" | "inactive" | "suspended"
-  postsCount: number
-  commentsCount: number
-  verified: boolean
-  joinDate: string
+  id: string;
+  username: string;
+  email: string;
+  status: "active" | "inactive" | "suspended";
+  postsCount: number;
+  commentsCount: number;
+  verified: boolean;
+  joinDate: string;
 }
 
 export interface Group {
-  id: string
-  name: string
-  description: string
-  members: number
-  posts: number
-  verified: boolean
-  createdAt: string
+  id: string;
+  name: string;
+  description: string;
+  members: number;
+  posts: number;
+  verified: boolean;
+  createdAt: string;
 }
 
 export interface Notification {
-  id: string
-  title: string
-  content: string
-  targetGroup: string
-  sentAt: string
-  deliveredCount: number
+  id: string;
+  title: string;
+  content: string;
+  targetGroup: string;
+  sentAt: string;
+  deliveredCount: number;
 }
 
 export interface GhostPost {
-  id: string
-  content: string
-  author: string
-  likes: number
-  comments: number
-  createdAt: string
+  id: string;
+  content: string;
+  author: string;
+  likes: number;
+  comments: number;
+  createdAt: string;
 }
 
 export interface FOMOWindow {
-  id: string
-  name: string
-  status: "active" | "scheduled" | "ended"
-  startDate: string
-  endDate: string
-  postsCreated: number
-  usersParticipated: number
+  id: string;
+  name: string;
+  status: "active" | "scheduled" | "ended" | "disabled";
+  startDate: string;
+  endDate: string;
+  postsCreated: number;
+  usersParticipated: number;
 }
 
 export interface ContentFlag {
-  id: string
-  postId: string
-  content: string
-  reason: string
-  flaggedAt: string
-  status: "pending" | "reviewed" | "hidden"
-  author: string
+  id: string;
+  postId: string;
+  content: string;
+  reason: string;
+  flaggedAt: string;
+  status: "pending" | "reviewed" | "hidden";
+  author: string;
 }
 
 export interface AICampaign {
-  id: string
-  name: string
-  type: "engagement" | "posts" | "comments"
-  status: "active" | "paused" | "completed"
-  interactions: number
-  reach: number
-  startedAt: string
+  id: string;
+  name: string;
+  type: "engagement" | "posts" | "comments";
+  status: "active" | "paused" | "completed";
+  interactions: number;
+  reach: number;
+  startedAt: string;
 }
 
-// Dummy Users Data
-const dummyUsers: User[] = [
-  {
-    id: "1",
-    username: "@sophiaArt",
-    email: "sophia@example.com",
-    status: "active",
-    postsCount: 245,
-    commentsCount: 512,
-    verified: true,
-    joinDate: "2023-01-15",
-  },
-  {
-    id: "2",
-    username: "@oliviaStyle",
-    email: "olivia@example.com",
-    status: "active",
-    postsCount: 198,
-    commentsCount: 445,
-    verified: true,
-    joinDate: "2023-02-20",
-  },
-  {
-    id: "3",
-    username: "@avaDesigns",
-    email: "ava@example.com",
-    status: "active",
-    postsCount: 176,
-    commentsCount: 389,
-    verified: true,
-    joinDate: "2023-03-10",
-  },
-  {
-    id: "4",
-    username: "@jessicakim",
-    email: "jessica@example.com",
-    status: "active",
-    postsCount: 154,
-    commentsCount: 321,
-    verified: false,
-    joinDate: "2023-04-05",
-  },
-  {
-    id: "5",
-    username: "@emmaMusic",
-    email: "emma@example.com",
-    status: "active",
-    postsCount: 132,
-    commentsCount: 278,
-    verified: true,
-    joinDate: "2023-05-12",
-  },
-  {
-    id: "6",
-    username: "@miaPhoto",
-    email: "mia@example.com",
-    status: "inactive",
-    postsCount: 98,
-    commentsCount: 156,
-    verified: false,
-    joinDate: "2023-06-01",
-  },
-  {
-    id: "7",
-    username: "@lunaGaming",
-    email: "luna@example.com",
-    status: "active",
-    postsCount: 267,
-    commentsCount: 634,
-    verified: true,
-    joinDate: "2022-12-20",
-  },
-  {
-    id: "8",
-    username: "@isabelaArt",
-    email: "isabela@example.com",
-    status: "suspended",
-    postsCount: 112,
-    commentsCount: 234,
-    verified: true,
-    joinDate: "2023-03-22",
-  },
-  {
-    id: "9",
-    username: "@zoeTravel",
-    email: "zoe@example.com",
-    status: "active",
-    postsCount: 156,
-    commentsCount: 412,
-    verified: true,
-    joinDate: "2023-07-14",
-  },
-  {
-    id: "10",
-    username: "@noahTech",
-    email: "noah@example.com",
-    status: "active",
-    postsCount: 189,
-    commentsCount: 501,
-    verified: false,
-    joinDate: "2023-08-03",
-  },
-  {
-    id: "11",
-    username: "@liamCoding",
-    email: "liam@example.com",
-    status: "active",
-    postsCount: 223,
-    commentsCount: 567,
-    verified: true,
-    joinDate: "2023-01-08",
-  },
-  {
-    id: "12",
-    username: "@evanVlogs",
-    email: "evan@example.com",
-    status: "active",
-    postsCount: 178,
-    commentsCount: 389,
-    verified: false,
-    joinDate: "2023-09-11",
-  },
-]
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  user: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+}
 
-const dummyGroups: Group[] = [
-  {
-    id: "1",
-    name: "Photography Enthusiasts",
-    description: "Share and discuss photography tips",
-    members: 2450,
-    posts: 8920,
-    verified: true,
-    createdAt: "2022-06-15",
-  },
-  {
-    id: "2",
-    name: "Digital Art Collective",
-    description: "Showcase digital art works",
-    members: 1890,
-    posts: 5670,
-    verified: true,
-    createdAt: "2022-08-22",
-  },
-  {
-    id: "3",
-    name: "Gaming Community",
-    description: "Gaming news and discussions",
-    members: 3200,
-    posts: 12500,
-    verified: true,
-    createdAt: "2022-05-10",
-  },
-  {
-    id: "4",
-    name: "Travel Vlog Squad",
-    description: "Travel vlogs and experiences",
-    members: 1567,
-    posts: 4230,
-    verified: false,
-    createdAt: "2023-01-20",
-  },
-  {
-    id: "5",
-    name: "Music Producers",
-    description: "Music production and collaboration",
-    members: 890,
-    posts: 2345,
-    verified: true,
-    createdAt: "2023-02-14",
-  },
-]
+export interface VerificationRequest {
+  id: string;
+  displayName: string;
+  email: string;
+  type: string;
+  submittedAt: string;
+  status: string;
+}
 
-const dummyNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "New Feature Launch",
-    content: "Check out our new ghost posting feature!",
-    targetGroup: "all",
-    sentAt: "2024-01-15",
-    deliveredCount: 23450,
-  },
-  {
-    id: "2",
-    title: "Maintenance Reminder",
-    content: "System maintenance on Sunday 2AM UTC",
-    targetGroup: "all",
-    sentAt: "2024-01-14",
-    deliveredCount: 18920,
-  },
-  {
-    id: "3",
-    title: "Content Update",
-    content: "New guidelines for content creators",
-    targetGroup: "verified",
-    sentAt: "2024-01-13",
-    deliveredCount: 3218,
-  },
-]
+export interface AdCampaign {
+  id: string;
+  name: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  spend: number;
+}
 
-const dummyGhostPosts: GhostPost[] = [
-  {
-    id: "1",
-    content: "Anonymous post about travel experiences",
-    author: "Ghost_12345",
-    likes: 234,
-    comments: 56,
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    content: "Mysterious photography tips shared",
-    author: "Ghost_67890",
-    likes: 567,
-    comments: 123,
-    createdAt: "2024-01-14",
-  },
-  {
-    id: "3",
-    content: "Anonymous art showcase",
-    author: "Ghost_11111",
-    likes: 892,
-    comments: 234,
-    createdAt: "2024-01-13",
-  },
-]
+export interface DashboardSummary {
+  totals: {
+    users: number;
+    onlineNow: number;
+    verifiedAccounts: number;
+    ghostPosts24h: number;
+    flaggedContent: number;
+  };
+  topActiveUsers: Array<{
+    id: string;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    posts: number;
+    comments: number;
+    interactions: number;
+  }>;
+  aiEngagementToday: {
+    comments: number;
+    likes: number;
+    replies: number;
+  };
+  fomoStatus:
+    | {
+        isActive: true;
+        windowId: string;
+        title: string;
+        startTime: string;
+        endTime: string;
+        remainingMs: number;
+        stats: { postCount: number; participantCount: number };
+      }
+    | { isActive: false };
+  flaggedExplicitContent: {
+    total: number;
+    hiddenUnder18: number;
+    escalated: number;
+  };
+}
 
-const dummyFOMOWindows: FOMOWindow[] = [
-  {
-    id: "1",
-    name: "Summer Challenge 2024",
-    status: "active",
-    startDate: "2024-01-10",
-    endDate: "2024-01-17",
-    postsCreated: 2890,
-    usersParticipated: 1240,
-  },
-  {
-    id: "2",
-    name: "New Year Photo Contest",
-    status: "ended",
-    startDate: "2024-01-01",
-    endDate: "2024-01-08",
-    postsCreated: 3450,
-    usersParticipated: 1567,
-  },
-  {
-    id: "3",
-    name: "Spring Creativity Week",
-    status: "scheduled",
-    startDate: "2024-03-01",
-    endDate: "2024-03-07",
-    postsCreated: 0,
-    usersParticipated: 0,
-  },
-]
+export interface GhostSummary {
+  totalGhostPosts: number;
+  activeThisHour: number;
+  avgEngagement: number;
+}
 
-const dummyContentFlags: ContentFlag[] = [
-  {
-    id: "1",
-    postId: "post_123",
-    content: "Explicit content detected",
-    reason: "Violation of community guidelines",
-    flaggedAt: "2024-01-15",
-    status: "pending",
-    author: "@user123",
-  },
-  {
-    id: "2",
-    postId: "post_456",
-    content: "Hate speech detected",
-    reason: "Offensive language",
-    flaggedAt: "2024-01-14",
-    status: "reviewed",
-    author: "@user456",
-  },
-  {
-    id: "3",
-    postId: "post_789",
-    content: "Spam content",
-    reason: "Promotional spam",
-    flaggedAt: "2024-01-13",
-    status: "hidden",
-    author: "@user789",
-  },
-]
+export interface VerificationStats {
+  pending: number;
+  approved30d: number;
+  rejected30d: number;
+}
 
-const dummyAICampaigns: AICampaign[] = [
-  {
-    id: "1",
-    name: "Engagement Booster",
-    type: "engagement",
-    status: "active",
-    interactions: 15420,
-    reach: 34560,
-    startedAt: "2024-01-10",
-  },
-  {
-    id: "2",
-    name: "Content Seeding",
-    type: "posts",
-    status: "active",
-    interactions: 8920,
-    reach: 21340,
-    startedAt: "2024-01-12",
-  },
-  {
-    id: "3",
-    name: "Comment Catalyst",
-    type: "comments",
-    status: "paused",
-    interactions: 5670,
-    reach: 12450,
-    startedAt: "2024-01-08",
-  },
-]
+export interface AdSummary {
+  totalImpressions: number;
+  totalClicks: number;
+  avgCtr: number;
+  totalSpend: number;
+}
 
-// API Functions
-export async function getUsers(page = 1, limit = 10) {
-  await new Promise((resolve) => setTimeout(resolve, 300)) // Simulate network delay
-  const start = (page - 1) * limit
-  const end = start + limit
-  return {
-    users: dummyUsers.slice(start, end),
-    total: dummyUsers.length,
-    page,
-    limit,
+export interface SecuritySummary {
+  sslStatus: string;
+  sslValidUntil: string | null;
+  rateLimitStatus: string;
+  twoFaAdoptionPercent: number;
+  failedLogins24h: number;
+}
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
+
+const getAuthToken = async () => {
+  if (typeof window === "undefined") return "";
+  const localToken =
+    window.localStorage.getItem("adminToken") ||
+    window.localStorage.getItem("token") ||
+    "";
+  if (localToken) return localToken;
+
+  const session = await getSession();
+  if (session?.accessToken) {
+    window.localStorage.setItem("adminToken", session.accessToken);
+    return session.accessToken;
   }
-}
+  return "";
+};
 
-export async function getGroups(page = 1, limit = 10) {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  const start = (page - 1) * limit
-  const end = start + limit
-  return {
-    groups: dummyGroups.slice(start, end),
-    total: dummyGroups.length,
-    page,
-    limit,
+const apiRequest = async <T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> => {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string> | undefined),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = payload?.message || "Request failed";
+    throw new Error(message);
+  }
+
+  return payload as T;
+};
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const response = await apiRequest<{ data: DashboardSummary }>(
+    "/dashboard/summary"
+  );
+  return response.data;
 }
 
-export async function getNotifications() {
-  await new Promise((resolve) => setTimeout(resolve, 200))
-  return dummyNotifications
+export async function getUsers(
+  page = 1,
+  limit = 10,
+  search?: string,
+  status?: string
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  if (search) params.set("search", search);
+  if (status && status !== "all") {
+    const mappedStatus = status === "reviewed" ? "approved" : status === "hidden" ? "removed" : status;
+    params.set("status", mappedStatus);
+  }
+
+  const response = await apiRequest<{
+    data: User[];
+    pagination: { total: number; page: number; limit: number };
+  }>(`/user/admin/users?${params.toString()}`);
+
+  return {
+    users: response.data,
+    total: response.pagination.total,
+    page: response.pagination.page,
+    limit: response.pagination.limit,
+  };
 }
 
-export async function sendNotification(notification: Omit<Notification, "id" | "sentAt" | "deliveredCount">) {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return { success: true, id: Math.random().toString(36) }
+export async function getGroups(page = 1, limit = 10, search?: string) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  if (search) params.set("search", search);
+
+  const response = await apiRequest<{
+    data: Array<{
+      id: string;
+      name: string;
+      description: string;
+      members: number;
+      posts: number;
+      isVerified: boolean;
+      createdAt: string;
+    }>;
+    pagination: { total: number; page: number; limit: number };
+  }>(`/group/admin/groups?${params.toString()}`);
+
+  return {
+    groups: response.data.map((group) => ({
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      members: group.members,
+      posts: group.posts,
+      verified: group.isVerified,
+      createdAt: new Date(group.createdAt).toISOString().split("T")[0],
+    })),
+    total: response.pagination.total,
+    page: response.pagination.page,
+    limit: response.pagination.limit,
+  };
+}
+
+export async function getGroupDetails(id: string) {
+  const response = await apiRequest<{
+    data: {
+      id: string;
+      name: string;
+      description: string;
+      visibility: string;
+      isVerified: boolean;
+      members: number;
+      posts: number;
+      createdAt: string;
+      updatedAt: string;
+      avatarUrl?: string;
+    };
+  }>(`/group/admin/groups/${id}`);
+
+  const group = response.data;
+  return {
+    ...group,
+    createdAt: new Date(group.createdAt).toISOString().split("T")[0],
+    updatedAt: new Date(group.updatedAt).toISOString().split("T")[0],
+  };
+}
+
+export async function updateGroup(
+  id: string,
+  payload: { name?: string; description?: string; visibility?: string; isVerified?: boolean }
+) {
+  return apiRequest(`/group/admin/groups/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteGroup(id: string) {
+  return apiRequest(`/group/admin/groups/${id}`, { method: "DELETE" });
+}
+
+export async function getNotifications(page = 1, limit = 20) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  const response = await apiRequest<{
+    data: Array<{
+      id: string;
+      title: string;
+      content: string;
+      targetGroup: string;
+      deliveredCount: number;
+      createdAt: string;
+    }>;
+  }>(`/admin-notifications/admin?${params.toString()}`);
+
+  return response.data.map((notif) => ({
+    id: notif.id,
+    title: notif.title,
+    content: notif.content,
+    targetGroup: notif.targetGroup,
+    deliveredCount: notif.deliveredCount,
+    sentAt: new Date(notif.createdAt).toISOString().split("T")[0],
+  }));
+}
+
+export async function sendNotification(notification: {
+  title: string;
+  content: string;
+  targetGroup: string;
+}) {
+  const response = await apiRequest<{ data: { id: string } }>(
+    "/admin-notifications/admin",
+    {
+      method: "POST",
+      body: JSON.stringify(notification),
+    }
+  );
+  return response.data;
+}
+
+export async function getGhostSummary(): Promise<GhostSummary> {
+  const response = await apiRequest<{ data: GhostSummary }>(
+    "/ghost/admin/summary"
+  );
+  return response.data;
 }
 
 export async function getGhostPosts(page = 1, limit = 10) {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  const start = (page - 1) * limit
-  const end = start + limit
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  const response = await apiRequest<{
+    data: Array<{
+      id: string;
+      contentPreview: string;
+      author: string | null;
+      likes: number;
+      comments: number;
+      createdAt: string;
+    }>;
+    pagination: { total: number; page: number; limit: number };
+  }>(`/ghost/admin/posts?${params.toString()}`);
+
   return {
-    posts: dummyGhostPosts.slice(start, end),
-    total: dummyGhostPosts.length,
-    page,
-    limit,
-  }
+    posts: response.data.map((post) => ({
+      id: post.id,
+      content: post.contentPreview,
+      author: post.author || "Ghost",
+      likes: post.likes,
+      comments: post.comments,
+      createdAt: new Date(post.createdAt).toISOString().split("T")[0],
+    })),
+    total: response.pagination.total,
+    page: response.pagination.page,
+    limit: response.pagination.limit,
+  };
 }
 
 export async function getFOMOWindows() {
-  await new Promise((resolve) => setTimeout(resolve, 200))
-  return dummyFOMOWindows
+  const response = await apiRequest<{
+    data: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      status: "active" | "scheduled" | "ended" | "disabled";
+      startTime: string;
+      endTime: string;
+      stats: { postCount: number; participantCount: number };
+    }>;
+  }>("/fomo/admin/windows");
+
+  return response.data.map((window) => ({
+    id: window.id,
+    name: window.title,
+    status: window.status,
+    startDate: new Date(window.startTime).toISOString().split("T")[0],
+    endDate: new Date(window.endTime).toISOString().split("T")[0],
+    postsCreated: window.stats?.postCount || 0,
+    usersParticipated: window.stats?.participantCount || 0,
+    description: window.description || "",
+  }));
 }
 
-export async function getContentFlags(page = 1, limit = 10) {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  const start = (page - 1) * limit
-  const end = start + limit
-  return {
-    flags: dummyContentFlags.slice(start, end),
-    total: dummyContentFlags.length,
-    page,
-    limit,
+export async function createFOMOWindow(payload: {
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+}) {
+  return apiRequest("/fomo/admin/windows", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateFOMOWindow(
+  id: string,
+  payload: { title?: string; description?: string; startTime?: string; endTime?: string }
+) {
+  return apiRequest(`/fomo/admin/windows/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteFOMOWindow(id: string) {
+  return apiRequest(`/fomo/admin/windows/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getFOMOWindowAnalytics(id: string) {
+  return apiRequest(`/fomo/admin/windows/${id}/analytics`);
+}
+
+export async function getContentFlags(page = 1, limit = 10, status?: string) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  if (status && status !== "all") {
+    const mappedStatus = status === "reviewed" ? "approved" : status === "hidden" ? "removed" : status;
+    params.set("status", mappedStatus);
   }
+
+  const response = await apiRequest<{
+    data: Array<{
+      id: string;
+      postId: string;
+      contentPreview: string;
+      reason: string;
+      author: { username?: string; displayName?: string } | null;
+      status: string;
+      displayStatus?: string;
+      createdAt: string;
+    }>;
+    pagination: { total: number; page: number; limit: number };
+  }>(`/moderation/queue?${params.toString()}`);
+
+  return {
+    flags: response.data.map((flag) => ({
+      id: flag.id,
+      postId: flag.postId,
+      content: flag.contentPreview,
+      reason: flag.reason,
+      flaggedAt: new Date(flag.createdAt).toISOString().split("T")[0],
+      status: (flag.displayStatus || flag.status || "pending") as ContentFlag["status"],
+      author: flag.author?.username || flag.author?.displayName || "-",
+    })),
+    total: response.pagination.total,
+    page: response.pagination.page,
+    limit: response.pagination.limit,
+  };
 }
 
 export async function reviewContent(flagId: string, action: "approve" | "hide") {
-  await new Promise((resolve) => setTimeout(resolve, 400))
-  return { success: true }
+  const status = action === "approve" ? "approved" : "removed";
+  return apiRequest("/moderation/status", {
+    method: "PATCH",
+    body: JSON.stringify({ postId: flagId, status }),
+  });
 }
 
 export async function getAICampaigns() {
-  await new Promise((resolve) => setTimeout(resolve, 200))
-  return dummyAICampaigns
+  const response = await apiRequest<{ data: AICampaign[] }>("/ai-campaigns");
+  return response.data.map((campaign) => ({
+    ...campaign,
+    startedAt: new Date(campaign.startedAt).toISOString().split("T")[0],
+  }));
 }
 
-export async function createAICampaign(campaign: Omit<AICampaign, "id" | "interactions" | "reach" | "startedAt">) {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return { success: true, id: Math.random().toString(36) }
+export async function createAICampaign(campaign: {
+  name: string;
+  type: AICampaign["type"];
+  status: AICampaign["status"];
+}) {
+  return apiRequest("/ai-campaigns", {
+    method: "POST",
+    body: JSON.stringify(campaign),
+  });
+}
+
+export async function updateAICampaignStatus(id: string, status: AICampaign["status"]) {
+  return apiRequest(`/ai-campaigns/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function deleteAICampaign(id: string) {
+  return apiRequest(`/ai-campaigns/${id}`, { method: "DELETE" });
+}
+
+export async function getSupportTickets(page = 1, limit = 20) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  const response = await apiRequest<{
+    data: Array<{
+      _id: string;
+      subject: string;
+      status: string;
+      priority: string;
+      createdAt: string;
+      user?: { displayName?: string; email?: string };
+    }>;
+    pagination: { total: number; page: number; limit: number };
+  }>(`/support-ticket/admin/all-tickets?${params.toString()}`);
+
+  return {
+    tickets: response.data.map((ticket) => ({
+      id: ticket._id,
+      subject: ticket.subject,
+      status: ticket.status || "open",
+      priority: ticket.priority || "medium",
+      createdAt: new Date(ticket.createdAt).toISOString().split("T")[0],
+      user: ticket.user?.displayName || ticket.user?.email || "Unknown",
+    })),
+    total: response.pagination.total,
+    page: response.pagination.page,
+    limit: response.pagination.limit,
+  };
+}
+
+export async function updateSupportTicketStatus(payload: {
+  ticketId: string;
+  status?: string;
+  priority?: string;
+}) {
+  return apiRequest("/support-ticket/admin/update-status", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getVerificationRequests(status?: string) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  params.set("limit", "100");
+
+  const response = await apiRequest<{
+    data: Array<{
+      id: string;
+      email: string;
+      displayName: string;
+      createdAt: string;
+      status: string;
+    }>;
+  }>(`/verification/admin/requests?${params.toString()}`);
+
+  return response.data.map((request) => ({
+    id: request.id,
+    displayName: request.displayName || "-",
+    email: request.email,
+    type: "Verification Badge",
+    submittedAt: new Date(request.createdAt).toISOString().split("T")[0],
+    status: request.status,
+  }));
+}
+
+export async function getVerificationStats(): Promise<VerificationStats> {
+  const response = await apiRequest<{ data: VerificationStats }>(
+    "/verification/admin/stats"
+  );
+  return response.data;
+}
+
+export async function updateVerificationRequest(payload: {
+  id: string;
+  status: "approved" | "rejected" | "processing" | "pending";
+  reason?: string;
+}) {
+  return apiRequest(`/verification/admin/requests/${payload.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: payload.status, reason: payload.reason }),
+  });
+}
+
+export async function getAdSummary(): Promise<AdSummary> {
+  const response = await apiRequest<{ data: AdSummary }>("/ads/summary");
+  return response.data;
+}
+
+export async function getAdCampaigns(): Promise<AdCampaign[]> {
+  const response = await apiRequest<{ data: AdCampaign[] }>("/ads/campaigns");
+  return response.data;
+}
+
+export async function createAdCampaign(payload: {
+  name: string;
+  impressions?: number;
+  clicks?: number;
+  spend?: number;
+}) {
+  return apiRequest("/ads/campaigns", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getSecuritySummary(): Promise<SecuritySummary> {
+  const response = await apiRequest<{ data: SecuritySummary }>(
+    "/security/summary"
+  );
+  return response.data;
 }

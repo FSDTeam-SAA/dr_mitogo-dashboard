@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,11 +9,20 @@ import { toast } from "sonner"
 import { Send } from "lucide-react"
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([])
+  const [notifications, setNotifications] = useState<any[]>([])
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [targetGroup, setTargetGroup] = useState("all")
   const [loading, setLoading] = useState(false)
+
+  const loadNotifications = () =>
+    getNotifications()
+      .then(setNotifications)
+      .catch((error) => toast.error(error.message || "Failed to load notifications"))
+
+  useEffect(() => {
+    loadNotifications()
+  }, [])
 
   const handleSend = async () => {
     if (!title.trim() || !content.trim()) {
@@ -31,9 +40,9 @@ export default function NotificationsPage() {
       toast.success("Notification sent successfully!")
       setTitle("")
       setContent("")
-      await getNotifications().then(setNotifications)
-    } catch (error) {
-      toast.error("Failed to send notification")
+      await loadNotifications()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send notification")
     } finally {
       setLoading(false)
     }

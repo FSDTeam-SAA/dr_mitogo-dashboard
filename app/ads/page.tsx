@@ -1,30 +1,66 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
+import { getAdSummary, getAdCampaigns, createAdCampaign } from "@/lib/api"
 import { toast } from "sonner"
 import { BarChart3, TrendingUp, Eye, Clock as Click } from "lucide-react"
 
-const campaigns = [
-  { id: "1", name: "Summer Sale 2024", impressions: 45230, clicks: 1240, ctr: 2.74, spend: "$523.50" },
-  { id: "2", name: "New Feature Launch", impressions: 32150, clicks: 890, ctr: 2.77, spend: "$412.20" },
-  { id: "3", name: "Brand Awareness", impressions: 56780, clicks: 1560, ctr: 2.74, spend: "$634.80" },
-]
-
 export default function AdsPage() {
+  const [summary, setSummary] = useState({ totalImpressions: 0, totalClicks: 0, avgCtr: 0, totalSpend: 0 })
+  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadCampaigns = async () => {
+    setLoading(true)
+    try {
+      const [summaryData, campaignsData] = await Promise.all([getAdSummary(), getAdCampaigns()])
+      setSummary(summaryData)
+      setCampaigns(campaignsData)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load ad campaigns")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadCampaigns()
+  }, [])
+
+  const handleCreate = async () => {
+    const name = window.prompt("Campaign name")
+    if (!name?.trim()) return
+
+    try {
+      await createAdCampaign({ name: name.trim() })
+      toast.success("Campaign created")
+      await loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create campaign")
+    }
+  }
+
+  const formatSpend = (value: number) => `$${value.toFixed(2)}`
+
   return (
     <div>
       <Header title="Ad Campaigns" description="Manage advertising campaigns and analytics" />
 
       <div className="p-8 space-y-6">
-        <Button className="w-full">Create New Campaign</Button>
+        <Button className="w-full" onClick={handleCreate}>
+          Create New Campaign
+        </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg border border-border p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Impressions</p>
-                <p className="text-2xl font-bold text-primary mt-2">134,160</p>
+                <p className="text-2xl font-bold text-primary mt-2">
+                  {summary.totalImpressions.toLocaleString()}
+                </p>
               </div>
               <Eye className="w-8 h-8 text-primary/20" />
             </div>
@@ -33,7 +69,7 @@ export default function AdsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Clicks</p>
-                <p className="text-2xl font-bold text-primary mt-2">3,690</p>
+                <p className="text-2xl font-bold text-primary mt-2">{summary.totalClicks.toLocaleString()}</p>
               </div>
               <Click className="w-8 h-8 text-primary/20" />
             </div>
@@ -42,7 +78,7 @@ export default function AdsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Avg CTR</p>
-                <p className="text-2xl font-bold text-primary mt-2">2.75%</p>
+                <p className="text-2xl font-bold text-primary mt-2">{summary.avgCtr.toFixed(2)}%</p>
               </div>
               <TrendingUp className="w-8 h-8 text-primary/20" />
             </div>
@@ -51,7 +87,7 @@ export default function AdsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Spend</p>
-                <p className="text-2xl font-bold text-primary mt-2">$1,570.50</p>
+                <p className="text-2xl font-bold text-primary mt-2">{formatSpend(summary.totalSpend)}</p>
               </div>
               <BarChart3 className="w-8 h-8 text-primary/20" />
             </div>
@@ -72,20 +108,34 @@ export default function AdsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{campaign.name}</td>
-                    <td className="px-6 py-4 text-sm text-foreground">{campaign.impressions.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm text-foreground">{campaign.clicks.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm text-primary font-semibold">{campaign.ctr}%</td>
-                    <td className="px-6 py-4 text-sm text-foreground">{campaign.spend}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <Button size="sm" variant="ghost" onClick={() => toast.success("Analytics opened")}>
-                        View
-                      </Button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-6">
+                      <div className="text-sm text-muted-foreground">Loading campaigns...</div>
                     </td>
                   </tr>
-                ))}
+                ) : campaigns.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-6">
+                      <div className="text-sm text-muted-foreground">No campaigns found.</div>
+                    </td>
+                  </tr>
+                ) : (
+                  campaigns.map((campaign) => (
+                    <tr key={campaign.id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="px-6 py-4 text-sm font-medium text-foreground">{campaign.name}</td>
+                      <td className="px-6 py-4 text-sm text-foreground">{campaign.impressions.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-foreground">{campaign.clicks.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-primary font-semibold">
+                        {campaign.ctr.toFixed(2)}%
+                      </td>
+                      <td className="px-6 py-4 text-sm text-foreground">{formatSpend(campaign.spend)}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <Button size="sm" variant="ghost" onClick={() => toast.success("Analytics opened")}>View</Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

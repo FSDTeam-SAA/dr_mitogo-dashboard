@@ -1,21 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getAICampaigns, createAICampaign } from "@/lib/api"
+import { getAICampaigns, createAICampaign, updateAICampaignStatus, deleteAICampaign } from "@/lib/api"
 import { toast } from "sonner"
 import { Play, Pause, Trash2 } from "lucide-react"
 
+const getTypeLabel = (type: string) => {
+  switch (type) {
+    case "engagement":
+      return "Engagement Booster"
+    case "posts":
+      return "Content Seeding"
+    case "comments":
+      return "Comment Catalyst"
+    default:
+      return type
+  }
+}
+
 export default function AISettingsPage() {
-  const [campaigns, setCampaigns] = useState([])
+  const [campaigns, setCampaigns] = useState<any[]>([])
   const [campaignName, setCampaignName] = useState("")
   const [campaignType, setCampaignType] = useState("engagement")
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+
+  const loadCampaigns = () => {
+    setLoading(true)
+    return getAICampaigns()
+      .then(setCampaigns)
+      .catch((error) => toast.error(error.message || "Failed to load campaigns"))
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => {
-    getAICampaigns().then(setCampaigns)
+    loadCampaigns()
   }, [])
 
   const handleCreateCampaign = async () => {
@@ -24,20 +46,42 @@ export default function AISettingsPage() {
       return
     }
 
-    setLoading(true)
+    setCreating(true)
     try {
       await createAICampaign({
-        name: campaignName,
+        name: campaignName.trim(),
         type: campaignType as any,
         status: "active",
       })
-      toast.success("Campaign created successfully!")
+      toast.success("Campaign created successfully")
       setCampaignName("")
-      await getAICampaigns().then(setCampaigns)
-    } catch (error) {
-      toast.error("Failed to create campaign")
+      await loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create campaign")
     } finally {
-      setLoading(false)
+      setCreating(false)
+    }
+  }
+
+  const handleToggleStatus = async (campaign: any) => {
+    const nextStatus = campaign.status === "active" ? "paused" : "active"
+    try {
+      await updateAICampaignStatus(campaign.id, nextStatus)
+      toast.success(`Campaign ${nextStatus === "active" ? "started" : "paused"}`)
+      await loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update campaign")
+    }
+  }
+
+  const handleDelete = async (campaignId: string) => {
+    if (!window.confirm("Delete this campaign?")) return
+    try {
+      await deleteAICampaign(campaignId)
+      toast.success("Campaign deleted")
+      await loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete campaign")
     }
   }
 
@@ -82,60 +126,61 @@ export default function AISettingsPage() {
                 <option value="comments">Comment Catalyst</option>
               </select>
             </div>
-            <Button onClick={handleCreateCampaign} disabled={loading} className="w-full">
-              {loading ? "Creating..." : "Create Campaign"}
+            <Button onClick={handleCreateCampaign} disabled={creating} className="w-full">
+              {creating ? "Creating..." : "Create Campaign"}
             </Button>
           </div>
         </div>
 
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-foreground">Active Campaigns</h2>
-          {campaigns.map((campaign: any) => (
-            <div key={campaign.id} className="bg-white rounded-lg border border-border p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-base font-bold text-foreground">{campaign.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Type: {campaign.type.charAt(0).toUpperCase() + campaign.type.slice(1)} • Started{" "}
-                    {campaign.startedAt}
-                  </p>
+          {loading ? (
+            <div className="text-sm text-muted-foreground">Loading campaigns...</div>
+          ) : campaigns.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No campaigns yet.</div>
+          ) : (
+            campaigns.map((campaign: any) => (
+              <div key={campaign.id} className="bg-white rounded-lg border border-border p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">{campaign.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Type: {getTypeLabel(campaign.type)} | Started {campaign.startedAt}
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
+                    {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
-                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                </span>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Interactions</p>
-                  <p className="text-2xl font-bold text-primary">{campaign.interactions.toLocaleString()}</p>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Interactions</p>
+                    <p className="text-2xl font-bold text-primary">{campaign.interactions.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Reach</p>
+                    <p className="text-2xl font-bold text-primary">{campaign.reach.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Reach</p>
-                  <p className="text-2xl font-bold text-primary">{campaign.reach.toLocaleString()}</p>
-                </div>
-              </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toast.success(`${campaign.status === "active" ? "Paused" : "Started"}`)}
-                >
-                  {campaign.status === "active" ? (
-                    <Pause className="w-4 h-4 mr-1" />
-                  ) : (
-                    <Play className="w-4 h-4 mr-1" />
-                  )}
-                  {campaign.status === "active" ? "Pause" : "Start"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => toast.success("Campaign deleted")}>
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleToggleStatus(campaign)}>
+                    {campaign.status === "active" ? (
+                      <Pause className="w-4 h-4 mr-1" />
+                    ) : (
+                      <Play className="w-4 h-4 mr-1" />
+                    )}
+                    {campaign.status === "active" ? "Pause" : "Start"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(campaign.id)}>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

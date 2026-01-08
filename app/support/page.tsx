@@ -1,44 +1,81 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
+import { getSupportTickets, updateSupportTicketStatus } from "@/lib/api"
 import { toast } from "sonner"
 import { MessageSquare, CheckCircle, Clock } from "lucide-react"
-
-const supportTickets = [
-  {
-    id: "1",
-    subject: "Bug in ghost posting",
-    user: "@user123",
-    status: "open",
-    priority: "high",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    subject: "Feature request: dark mode",
-    user: "@user456",
-    status: "open",
-    priority: "low",
-    createdAt: "2024-01-14",
-  },
-  {
-    id: "3",
-    subject: "Verification issue",
-    user: "@user789",
-    status: "in-progress",
-    priority: "medium",
-    createdAt: "2024-01-13",
-  },
-]
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function SupportPage() {
-  const [tickets, setTickets] = useState(supportTickets)
+  const [tickets, setTickets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [selectedTicket, setSelectedTicket] = useState<any | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ status: "open", priority: "medium" })
 
-  const handleResolve = (id: string) => {
-    setTickets(tickets.filter((t) => t.id !== id))
-    toast.success("Ticket resolved!")
+  const pageSize = 10
+
+  const loadTickets = () => {
+    setLoading(true)
+    getSupportTickets(page, pageSize)
+      .then((data) => {
+        setTickets(data.tickets)
+        setTotal(data.total)
+      })
+      .catch((error) => toast.error(error.message || "Failed to load tickets"))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadTickets()
+  }, [page])
+
+  const handleResolve = async (id: string) => {
+    try {
+      await updateSupportTicketStatus({ ticketId: id, status: "resolved" })
+      toast.success("Ticket resolved")
+      loadTickets()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update ticket")
+    }
+  }
+
+  const openDetails = (ticket: any) => {
+    setSelectedTicket(ticket)
+    setForm({
+      status: ticket.status || "open",
+      priority: ticket.priority || "medium",
+    })
+  }
+
+  const handleSave = async () => {
+    if (!selectedTicket) return
+    setSaving(true)
+    try {
+      await updateSupportTicketStatus({
+        ticketId: selectedTicket.id,
+        status: form.status,
+        priority: form.priority,
+      })
+      toast.success("Ticket updated")
+      setSelectedTicket(null)
+      loadTickets()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update ticket")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getPriorityColor = (priority: string) => {
@@ -58,7 +95,7 @@ export default function SupportPage() {
     switch (status) {
       case "open":
         return <MessageSquare className="w-4 h-4 mr-1" />
-      case "in-progress":
+      case "in_progress":
         return <Clock className="w-4 h-4 mr-1" />
       case "resolved":
         return <CheckCircle className="w-4 h-4 mr-1" />
@@ -66,6 +103,11 @@ export default function SupportPage() {
         return null
     }
   }
+
+  const formatStatus = (status: string) =>
+    status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
+  const totalPages = Math.ceil(total / pageSize)
 
   return (
     <div>
@@ -86,36 +128,133 @@ export default function SupportPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {tickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{ticket.subject}</td>
-                    <td className="px-6 py-4 text-sm text-primary">{ticket.user}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className="flex items-center text-foreground">
-                        {getStatusIcon(ticket.status)}
-                        {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}
-                      >
-                        {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{ticket.createdAt}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <Button size="sm" variant="ghost" onClick={() => handleResolve(ticket.id)}>
-                        Resolve
-                      </Button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-6">
+                      <div className="text-sm text-muted-foreground">Loading tickets...</div>
                     </td>
                   </tr>
-                ))}
+                ) : tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-6">
+                      <div className="text-sm text-muted-foreground">No tickets found.</div>
+                    </td>
+                  </tr>
+                ) : (
+                  tickets.map((ticket: any) => (
+                    <tr key={ticket.id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="px-6 py-4 text-sm font-medium text-foreground">{ticket.subject}</td>
+                      <td className="px-6 py-4 text-sm text-primary">{ticket.user}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className="flex items-center text-foreground">
+                          {getStatusIcon(ticket.status)}
+                          {formatStatus(ticket.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}
+                        >
+                          {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{ticket.createdAt}</td>
+                      <td className="px-6 py-4 text-sm flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => openDetails(ticket)}>
+                          View
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleResolve(ticket.id)}>
+                          Resolve
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {Math.min((page - 1) * pageSize + 1, total)} to {Math.min(page * pageSize, total)} of {total} tickets
+          </p>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              variant="outline"
+              size="sm"
+            >
+              Prev
+            </Button>
+            <Button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || totalPages === 0}
+              variant="outline"
+              size="sm"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       </div>
+
+      <Dialog open={!!selectedTicket} onOpenChange={(open) => (open ? null : setSelectedTicket(null))}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ticket Details</DialogTitle>
+            <DialogDescription>Review and update ticket status.</DialogDescription>
+          </DialogHeader>
+          {selectedTicket ? (
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Subject</p>
+                <p className="font-medium text-foreground">{selectedTicket.subject}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">User</p>
+                <p className="font-medium text-foreground">{selectedTicket.user}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Status</label>
+                  <select
+                    value={form.status}
+                    onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+                    className="w-full px-4 py-2 border border-border rounded-lg text-sm"
+                  >
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Priority</label>
+                  <select
+                    value={form.priority}
+                    onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}
+                    className="w-full px-4 py-2 border border-border rounded-lg text-sm"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedTicket(null)}>
+              Close
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

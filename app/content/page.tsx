@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { ChevronLeft, ChevronRight, CheckCircle, Eye } from "lucide-react"
 
 export default function ContentPage() {
-  const [flags, setFlags] = useState([])
+  const [flags, setFlags] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -18,15 +18,19 @@ export default function ContentPage() {
   const pageSize = 10
 
   useEffect(() => {
-    setLoading(true)
-    getContentFlags(page, pageSize).then((data) => {
-      setFlags(data.flags)
-      setTotal(data.total)
-      setLoading(false)
-    })
-  }, [page])
+    setPage(1)
+  }, [statusFilter])
 
-  const filteredFlags = flags.filter((flag: any) => statusFilter === "all" || flag.status === statusFilter)
+  useEffect(() => {
+    setLoading(true)
+    getContentFlags(page, pageSize, statusFilter)
+      .then((data) => {
+        setFlags(data.flags)
+        setTotal(data.total)
+      })
+      .catch((error) => toast.error(error.message || "Failed to load moderation queue"))
+      .finally(() => setLoading(false))
+  }, [page, statusFilter])
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -79,8 +83,14 @@ export default function ContentPage() {
                       <TableSkeleton />
                     </td>
                   </tr>
+                ) : flags.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-6">
+                      <div className="text-sm text-muted-foreground">No flagged posts found.</div>
+                    </td>
+                  </tr>
                 ) : (
-                  filteredFlags.map((flag: any) => (
+                  flags.map((flag: any) => (
                     <tr key={flag.id} className="hover:bg-secondary/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-mono text-muted-foreground">{flag.postId}</td>
                       <td className="px-6 py-4 text-sm text-foreground max-w-xs truncate">{flag.content}</td>
@@ -100,18 +110,24 @@ export default function ContentPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm flex gap-2">
-                        {flag.status === "pending" && (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => handleReview(flag.id, "approve")}>
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleReview(flag.id, "hide")}>
-                              <Eye className="w-4 h-4 mr-1" />
-                              Hide
-                            </Button>
-                          </>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleReview(flag.id, "approve")}
+                          disabled={flag.status === "reviewed"}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleReview(flag.id, "hide")}
+                          disabled={flag.status === "hidden"}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Hide
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -128,7 +144,7 @@ export default function ContentPage() {
           <div className="flex gap-2">
             <Button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
+              disabled={page === 1 || totalPages === 0}
               variant="outline"
               size="sm"
             >
@@ -148,8 +164,8 @@ export default function ContentPage() {
               ) : null
             })}
             <Button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
+              disabled={page === totalPages || totalPages === 0}
               variant="outline"
               size="sm"
             >

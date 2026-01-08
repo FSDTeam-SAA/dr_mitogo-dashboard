@@ -1,12 +1,44 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { getSecuritySummary } from "@/lib/api"
 import { toast } from "sonner"
 import { Shield, Lock, AlertTriangle, Activity } from "lucide-react"
 
 export default function SecurityPage() {
+  const [summary, setSummary] = useState({
+    sslStatus: "unknown",
+    sslValidUntil: null as string | null,
+    rateLimitStatus: "unknown",
+    twoFaAdoptionPercent: 0,
+    failedLogins24h: 0,
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getSecuritySummary()
+      .then(setSummary)
+      .catch((error) => toast.error(error.message || "Failed to load security summary"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const statusColor = (status: string, positive = "green") => {
+    if (status === "active" || status === "normal" || status === "enabled") {
+      return positive === "green" ? "text-green-600" : "text-blue-600"
+    }
+    if (status === "warning" || status === "degraded") {
+      return "text-yellow-600"
+    }
+    return "text-red-600"
+  }
+
+  const formatDate = (value: string | null) => (value ? new Date(value).toISOString().split("T")[0] : "Unknown")
+  const sslStatus = summary.sslStatus?.toLowerCase() || "unknown"
+  const rateStatus = summary.rateLimitStatus?.toLowerCase() || "unknown"
+
   return (
     <div>
       <Header title="Security" description="Platform security settings and monitoring" />
@@ -21,8 +53,10 @@ export default function SecurityPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">Active</p>
-              <p className="text-xs text-muted-foreground mt-1">Valid until Dec 2025</p>
+              <p className={`text-2xl font-bold ${statusColor(sslStatus)}`}>
+                {loading ? "Loading" : summary.sslStatus}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Valid until {formatDate(summary.sslValidUntil)}</p>
             </CardContent>
           </Card>
 
@@ -34,8 +68,10 @@ export default function SecurityPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">Normal</p>
-              <p className="text-xs text-muted-foreground mt-1">No violations detected</p>
+              <p className={`text-2xl font-bold ${statusColor(rateStatus)}`}>
+                {loading ? "Loading" : summary.rateLimitStatus}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Status from last 24 hours</p>
             </CardContent>
           </Card>
 
@@ -47,8 +83,12 @@ export default function SecurityPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">Enabled</p>
-              <p className="text-xs text-muted-foreground mt-1">98.4% user adoption</p>
+              <p className={`text-2xl font-bold ${statusColor("enabled", "blue")}`}>
+                {loading ? "Loading" : "Enabled"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {summary.twoFaAdoptionPercent.toFixed(1)}% user adoption
+              </p>
             </CardContent>
           </Card>
 
@@ -60,7 +100,7 @@ export default function SecurityPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-yellow-600">23</p>
+              <p className="text-2xl font-bold text-yellow-600">{summary.failedLogins24h}</p>
               <p className="text-xs text-muted-foreground mt-1">Last 24 hours</p>
             </CardContent>
           </Card>

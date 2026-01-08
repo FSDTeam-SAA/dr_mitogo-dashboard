@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,33 +8,42 @@ import { TableSkeleton } from "@/components/skeleton"
 import { getUsers } from "@/lib/api"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight, Search, Download } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function UsersPage() {
-  const [users, setUsers] = useState([])
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedUser, setSelectedUser] = useState<any | null>(null)
 
   const pageSize = 10
 
   useEffect(() => {
-    setLoading(true)
-    getUsers(page, pageSize).then((data) => {
-      setUsers(data.users)
-      setTotal(data.total)
-      setLoading(false)
-    })
-  }, [page])
+    setPage(1)
+  }, [searchTerm, statusFilter])
 
-  const filteredUsers = users.filter((user: any) => {
-    const matchesSearch =
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  useEffect(() => {
+    setLoading(true)
+    getUsers(page, pageSize, searchTerm, statusFilter)
+      .then((data) => {
+        setUsers(data.users)
+        setTotal(data.total)
+      })
+      .catch((error) => {
+        toast.error(error.message || "Failed to load users")
+      })
+      .finally(() => setLoading(false))
+  }, [page, searchTerm, statusFilter])
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -52,7 +61,8 @@ export default function UsersPage() {
       ]),
     ]
       .map((row) => row.join(","))
-      .join("\n")
+      .join("
+")
 
     const blob = new Blob([csv], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
@@ -123,7 +133,7 @@ export default function UsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user: any) => (
+                  users.map((user: any) => (
                     <tr key={user.id} className="hover:bg-secondary/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-foreground">{user.username}</td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
@@ -142,10 +152,10 @@ export default function UsersPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-foreground">{user.postsCount}</td>
                       <td className="px-6 py-4 text-sm text-foreground">{user.commentsCount}</td>
-                      <td className="px-6 py-4 text-sm">{user.verified ? "✓" : "-"}</td>
+                      <td className="px-6 py-4 text-sm">{user.verified ? "Yes" : "-"}</td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">{user.joinDate}</td>
                       <td className="px-6 py-4 text-sm">
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedUser(user)}>
                           View
                         </Button>
                       </td>
@@ -164,7 +174,7 @@ export default function UsersPage() {
           <div className="flex gap-2">
             <Button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
+              disabled={page === 1 || totalPages === 0}
               variant="outline"
               size="sm"
             >
@@ -184,8 +194,8 @@ export default function UsersPage() {
               ) : null
             })}
             <Button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
+              disabled={page === totalPages || totalPages === 0}
               variant="outline"
               size="sm"
             >
@@ -194,6 +204,54 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!selectedUser} onOpenChange={(open) => (open ? null : setSelectedUser(null))}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>View account information and activity.</DialogDescription>
+          </DialogHeader>
+          {selectedUser ? (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-muted-foreground">Username</p>
+                  <p className="font-medium text-foreground">{selectedUser.username}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p className="font-medium text-foreground">{selectedUser.email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <p className="font-medium text-foreground">{selectedUser.status}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Verified</p>
+                  <p className="font-medium text-foreground">{selectedUser.verified ? "Yes" : "No"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Posts</p>
+                  <p className="font-medium text-foreground">{selectedUser.postsCount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Comments</p>
+                  <p className="font-medium text-foreground">{selectedUser.commentsCount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Joined</p>
+                  <p className="font-medium text-foreground">{selectedUser.joinDate}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedUser(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
