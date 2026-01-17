@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { TableSkeleton } from "@/components/skeleton"
-import { getGhostPosts, getGhostSummary } from "@/lib/api"
+import { getGhostPosts, getGhostSummary, getGhostInsights, getGhostNames, updateGhostNameStatus } from "@/lib/api"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -26,6 +26,9 @@ export default function GhostSystemPage() {
     activeThisHour: 0,
     avgEngagement: 0,
   })
+  const [insights, setInsights] = useState<any | null>(null)
+  const [ghostNames, setGhostNames] = useState<any[]>([])
+  const [updatingName, setUpdatingName] = useState<string | null>(null)
   const [selectedPost, setSelectedPost] = useState<any | null>(null)
 
   const pageSize = 10
@@ -34,6 +37,15 @@ export default function GhostSystemPage() {
     getGhostSummary()
       .then(setSummary)
       .catch((error) => toast.error(error.message || "Failed to load summary"))
+  }, [])
+
+  useEffect(() => {
+    getGhostInsights()
+      .then(setInsights)
+      .catch((error) => toast.error(error.message || "Failed to load ghost insights"))
+    getGhostNames()
+      .then(setGhostNames)
+      .catch((error) => toast.error(error.message || "Failed to load ghost names"))
   }, [])
 
   useEffect(() => {
@@ -48,6 +60,25 @@ export default function GhostSystemPage() {
   }, [page])
 
   const totalPages = Math.ceil(total / pageSize)
+
+  const handleGhostNameStatus = async (name: string, status: "available" | "reserved" | "restricted") => {
+    setUpdatingName(name)
+    try {
+      await updateGhostNameStatus(name, status)
+      setGhostNames((prev) =>
+        prev.map((entry) =>
+          entry.name === name
+            ? { ...entry, status, restricted: status === "restricted", reserved: status === "reserved" }
+            : entry
+        )
+      )
+      toast.success(`Ghost name marked as ${status}`)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update ghost name")
+    } finally {
+      setUpdatingName(null)
+    }
+  }
 
   return (
     <div>
@@ -66,6 +97,133 @@ export default function GhostSystemPage() {
           <div className="bg-white rounded-lg border border-border p-6">
             <p className="text-sm text-muted-foreground">Avg Engagement</p>
             <p className="text-3xl font-bold text-primary mt-2">{summary.avgEngagement.toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-white rounded-lg border border-border p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Content Breakdown</h3>
+              <p className="text-xs text-muted-foreground">Last pull</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 bg-secondary/50 rounded-lg">
+                <p className="text-muted-foreground">Words only</p>
+                <p className="text-2xl font-bold text-primary">
+                  {insights ? insights.breakdown.textPosts.toLocaleString() : "-"}
+                </p>
+              </div>
+              <div className="p-3 bg-secondary/50 rounded-lg">
+                <p className="text-muted-foreground">Images</p>
+                <p className="text-2xl font-bold text-primary">
+                  {insights ? insights.breakdown.imagePosts.toLocaleString() : "-"}
+                </p>
+              </div>
+              <div className="p-3 bg-secondary/50 rounded-lg">
+                <p className="text-muted-foreground">Videos</p>
+                <p className="text-2xl font-bold text-primary">
+                  {insights ? insights.breakdown.videoPosts.toLocaleString() : "-"}
+                </p>
+              </div>
+              <div className="p-3 bg-secondary/50 rounded-lg">
+                <p className="text-muted-foreground">Audio/Music</p>
+                <p className="text-2xl font-bold text-primary">
+                  {insights ? insights.breakdown.audioPosts.toLocaleString() : "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-border p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Flagged Ghost Posts</h3>
+              <p className="text-xs text-muted-foreground">Auto-hide after 3+ reports</p>
+            </div>
+            {!insights || insights.flagged.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing flagged right now.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {insights.flagged.map((item: any) => (
+                  <div key={item.id} className="p-3 bg-secondary/40 rounded-lg">
+                    <p className="text-sm text-foreground line-clamp-2">{item.contentPreview || "No preview"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {item.reportCount} reports · {item.ghostName || "Ghost"}
+                    </p>
+                    {item.reasons?.length ? (
+                      <p className="text-xs text-muted-foreground mt-1">Reasons: {item.reasons.join(", ")}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-border p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-foreground">Ghost Names</h3>
+            <p className="text-xs text-muted-foreground">Reserve or restrict names from assignment</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">Ghost Name</th>
+                  <th className="px-4 py-2 text-left font-semibold">User</th>
+                  <th className="px-4 py-2 text-left font-semibold">School</th>
+                  <th className="px-4 py-2 text-left font-semibold">Work</th>
+                  <th className="px-4 py-2 text-left font-semibold">Status</th>
+                  <th className="px-4 py-2 text-left font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {ghostNames.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-4 text-muted-foreground text-sm">
+                      No ghost names found.
+                    </td>
+                  </tr>
+                ) : (
+                  ghostNames.map((entry) => (
+                    <tr key={entry.name}>
+                      <td className="px-4 py-3 font-medium text-foreground">{entry.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{entry.username || "-"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{entry.school || "-"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{entry.work || "-"}</td>
+                      <td className="px-4 py-3 text-muted-foreground capitalize">{entry.status}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGhostNameStatus(entry.name, "restricted")}
+                            disabled={updatingName === entry.name}
+                          >
+                            Restrict
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGhostNameStatus(entry.name, "reserved")}
+                            disabled={updatingName === entry.name}
+                          >
+                            Reserve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleGhostNameStatus(entry.name, "available")}
+                            disabled={updatingName === entry.name}
+                          >
+                            Allow
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 

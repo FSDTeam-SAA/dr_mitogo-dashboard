@@ -4,11 +4,15 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  phoneNumber?: string;
   status: "active" | "inactive" | "suspended";
   postsCount: number;
   commentsCount: number;
   verified: boolean;
   joinDate: string;
+  education?: string;
+  work?: string;
+  anonymousId?: string;
 }
 
 export interface Group {
@@ -19,12 +23,17 @@ export interface Group {
   posts: number;
   verified: boolean;
   createdAt: string;
+  moderationStatus?: string;
+  moderationMode?: string;
 }
 
 export interface Notification {
   id: string;
   title: string;
   content: string;
+  targetType?: string;
+  targetValue?: string | null;
+  mediaUrl?: string | null;
   targetGroup: string;
   sentAt: string;
   deliveredCount: number;
@@ -142,6 +151,33 @@ export interface GhostSummary {
   avgEngagement: number;
 }
 
+export interface GhostInsights {
+  breakdown: {
+    textPosts: number;
+    imagePosts: number;
+    videoPosts: number;
+    audioPosts: number;
+  };
+  flagged: Array<{
+    id: string;
+    contentPreview: string;
+    ghostName: string | null;
+    reportCount: number;
+    reasons: string[];
+    flaggedAt: string;
+  }>;
+}
+
+export interface GhostNameEntry {
+  name: string;
+  username: string;
+  school: string;
+  work: string;
+  status: "available" | "reserved" | "restricted";
+  restricted: boolean;
+  reserved: boolean;
+}
+
 export interface VerificationStats {
   pending: number;
   approved30d: number;
@@ -239,12 +275,43 @@ export async function getUsers(
     pagination: { total: number; page: number; limit: number };
   }>(`/user/admin/users?${params.toString()}`);
 
+  const mappedUsers = response.data.map((user) => ({
+    ...user,
+    joinDate: new Date(user.joinDate).toISOString().split("T")[0],
+  }));
+
   return {
-    users: response.data,
+    users: mappedUsers,
     total: response.pagination.total,
     page: response.pagination.page,
     limit: response.pagination.limit,
   };
+}
+
+export async function getUserProfile(userId: string) {
+  const response = await apiRequest<{ data: any }>(`/user/user-details/${userId}`);
+  const user = response.data;
+  return {
+    id: user.id || user._id || userId,
+    username: user.username || user.displayName || "",
+    email: user.email || "",
+    phoneNumber: user.phoneNumber || "",
+    education: user.education || "",
+    work: user.work || "",
+    anonymousId: user.anonymousId || "",
+    verified: !!user.isVerified,
+    joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "",
+  };
+}
+
+export async function updateUserStatus(
+  userId: string,
+  payload: { action: string; reason?: string; suspendedUntil?: string }
+) {
+  return apiRequest(`/user/admin/users/${userId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getGroups(page = 1, limit = 10, search?: string) {
@@ -275,6 +342,8 @@ export async function getGroups(page = 1, limit = 10, search?: string) {
       members: group.members,
       posts: group.posts,
       verified: group.isVerified,
+      moderationStatus: (group as any).moderationStatus || "active",
+      moderationMode: (group as any).moderationMode || "full",
       createdAt: new Date(group.createdAt).toISOString().split("T")[0],
     })),
     total: response.pagination.total,
@@ -317,6 +386,23 @@ export async function updateGroup(
   });
 }
 
+export async function updateGroupModeration(
+  id: string,
+  payload: { status?: "active" | "restricted" | "suspended"; mode?: "full" | "chat_only"; note?: string }
+) {
+  return apiRequest(`/group/admin/groups/${id}/moderation`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function messageGroup(id: string, message: string) {
+  return apiRequest(`/group/admin/groups/${id}/message`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
 export async function deleteGroup(id: string) {
   return apiRequest(`/group/admin/groups/${id}`, { method: "DELETE" });
 }
@@ -342,6 +428,9 @@ export async function getNotifications(page = 1, limit = 20) {
     id: notif.id,
     title: notif.title,
     content: notif.content,
+    targetType: (notif as any).targetType || notif.targetGroup,
+    targetValue: (notif as any).targetValue || null,
+    mediaUrl: (notif as any).mediaUrl || null,
     targetGroup: notif.targetGroup,
     deliveredCount: notif.deliveredCount,
     sentAt: new Date(notif.createdAt).toISOString().split("T")[0],
@@ -351,13 +440,20 @@ export async function getNotifications(page = 1, limit = 20) {
 export async function sendNotification(notification: {
   title: string;
   content: string;
-  targetGroup: string;
+  targetType?: string;
+  targetValue?: string;
+  mediaUrl?: string;
+  targetGroup?: string;
 }) {
+  const payload = {
+    ...notification,
+    targetGroup: notification.targetGroup || notification.targetType || "all",
+  };
   const response = await apiRequest<{ data: { id: string } }>(
     "/admin-notifications/admin",
     {
       method: "POST",
-      body: JSON.stringify(notification),
+      body: JSON.stringify(payload),
     }
   );
   return response.data;
@@ -401,6 +497,36 @@ export async function getGhostPosts(page = 1, limit = 10) {
     page: response.pagination.page,
     limit: response.pagination.limit,
   };
+}
+
+export async function getGhostInsights(): Promise<GhostInsights> {
+  const response = await apiRequest<{ data: any }>("/ghost/admin/insights");
+  const data = response.data;
+  return {
+    breakdown: data.breakdown || { textPosts: 0, imagePosts: 0, videoPosts: 0, audioPosts: 0 },
+    flagged: Array.isArray(data.flagged)
+      ? data.flagged.map((item: any) => ({
+          id: item.id,
+          contentPreview: item.contentPreview || "",
+          ghostName: item.ghostName || null,
+          reportCount: item.reportCount || 0,
+          reasons: item.reasons || [],
+          flaggedAt: item.flaggedAt ? new Date(item.flaggedAt).toISOString().split("T")[0] : "",
+        }))
+      : [],
+  };
+}
+
+export async function getGhostNames(): Promise<GhostNameEntry[]> {
+  const response = await apiRequest<{ data: GhostNameEntry[] }>("/ghost/admin/names");
+  return response.data;
+}
+
+export async function updateGhostNameStatus(name: string, status: GhostNameEntry["status"]) {
+  return apiRequest(`/ghost/admin/names/${encodeURIComponent(name)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
 export async function getFOMOWindows() {

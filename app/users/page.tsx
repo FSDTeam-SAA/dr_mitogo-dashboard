@@ -5,7 +5,7 @@ import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TableSkeleton } from "@/components/skeleton"
-import { getUsers } from "@/lib/api"
+import { getUserProfile, getUsers, updateUserStatus } from "@/lib/api"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight, Search, Download } from "lucide-react"
 import {
@@ -25,6 +25,9 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedUser, setSelectedUser] = useState<any | null>(null)
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
   const pageSize = 10
 
@@ -72,6 +75,77 @@ export default function UsersPage() {
     toast.success("Users exported successfully")
   }
 
+  const openManageUser = async (user: any) => {
+    setSelectedUser(user)
+    setDetailLoading(true)
+    try {
+      const profile = await getUserProfile(user.id)
+      setSelectedUserProfile(profile)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load user details")
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const handleCloseDialog = () => {
+    setSelectedUser(null)
+    setSelectedUserProfile(null)
+  }
+
+  const applyStatusLocally = (action: string) => {
+    const deriveStatus = (current: string) => {
+      if (action === "ban" || action === "suspend") return "suspended"
+      if (action === "restrict") return "inactive"
+      if (["unban", "unsuspend", "unrestrict"].includes(action)) return "active"
+      return current
+    }
+
+    setUsers((prev) =>
+      prev.map((user) =>
+        user.id === selectedUser?.id
+          ? {
+              ...user,
+              status: deriveStatus(user.status),
+              verified: action === "verify" ? true : action === "unverify" ? false : user.verified,
+            }
+          : user
+      )
+    )
+    setSelectedUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: deriveStatus(prev.status),
+            verified: action === "verify" ? true : action === "unverify" ? false : prev.verified,
+          }
+        : prev
+    )
+    setSelectedUserProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: deriveStatus(prev.status || "active"),
+            verified: action === "verify" ? true : action === "unverify" ? false : prev.verified,
+          }
+        : prev
+    )
+  }
+
+  const handleUserAction = async (action: string) => {
+    if (!selectedUser) return
+    setActionLoading(true)
+    try {
+      await updateUserStatus(selectedUser.id, { action })
+      applyStatusLocally(action)
+      toast.success("User updated")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update user")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   return (
     <div>
       <Header title="User Management" description="Manage and view all platform users" />
@@ -116,10 +190,14 @@ export default function UsersPage() {
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Username</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Email</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Phone</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Posts</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Comments</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Verified</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">School</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Work</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Ghost Name</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Join Date</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Action</th>
                 </tr>
@@ -136,6 +214,7 @@ export default function UsersPage() {
                     <tr key={user.id} className="hover:bg-secondary/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-foreground">{user.username}</td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{user.phoneNumber || "-"}</td>
                       <td className="px-6 py-4 text-sm">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -152,10 +231,13 @@ export default function UsersPage() {
                       <td className="px-6 py-4 text-sm text-foreground">{user.postsCount}</td>
                       <td className="px-6 py-4 text-sm text-foreground">{user.commentsCount}</td>
                       <td className="px-6 py-4 text-sm">{user.verified ? "Yes" : "-"}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{user.education || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{user.work || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{user.anonymousId || "-"}</td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">{user.joinDate}</td>
                       <td className="px-6 py-4 text-sm">
-                        <Button size="sm" variant="ghost" onClick={() => setSelectedUser(user)}>
-                          View
+                        <Button size="sm" variant="ghost" onClick={() => openManageUser(user)}>
+                          Manage
                         </Button>
                       </td>
                     </tr>
@@ -204,22 +286,28 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <Dialog open={!!selectedUser} onOpenChange={(open) => (open ? null : setSelectedUser(null))}>
+      <Dialog open={!!selectedUser} onOpenChange={(open) => (open ? null : handleCloseDialog())}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>View account information and activity.</DialogDescription>
+            <DialogDescription>Manage account status and flags.</DialogDescription>
           </DialogHeader>
-          {selectedUser ? (
+          {detailLoading ? (
+            <p className="text-sm text-muted-foreground">Loading profile...</p>
+          ) : selectedUser ? (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-muted-foreground">Username</p>
-                  <p className="font-medium text-foreground">{selectedUser.username}</p>
+                  <p className="font-medium text-foreground">{(selectedUserProfile || selectedUser).username}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Email</p>
-                  <p className="font-medium text-foreground">{selectedUser.email}</p>
+                  <p className="font-medium text-foreground">{(selectedUserProfile || selectedUser).email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Phone</p>
+                  <p className="font-medium text-foreground">{(selectedUserProfile || selectedUser).phoneNumber || "-"}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Status</p>
@@ -228,6 +316,18 @@ export default function UsersPage() {
                 <div>
                   <p className="text-muted-foreground">Verified</p>
                   <p className="font-medium text-foreground">{selectedUser.verified ? "Yes" : "No"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Ghost Name</p>
+                  <p className="font-medium text-foreground">{(selectedUserProfile || selectedUser).anonymousId || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">School</p>
+                  <p className="font-medium text-foreground">{(selectedUserProfile || selectedUser).education || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Work</p>
+                  <p className="font-medium text-foreground">{(selectedUserProfile || selectedUser).work || "-"}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Posts</p>
@@ -242,10 +342,33 @@ export default function UsersPage() {
                   <p className="font-medium text-foreground">{selectedUser.joinDate}</p>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="sm" onClick={() => handleUserAction(selectedUser.verified ? "unverify" : "verify")} disabled={actionLoading}>
+                  {selectedUser.verified ? "Remove verification" : "Verify user"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleUserAction("ban")} disabled={actionLoading}>
+                  Ban account
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleUserAction("unban")} disabled={actionLoading}>
+                  Lift ban
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleUserAction("restrict")} disabled={actionLoading}>
+                  Restrict account
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleUserAction("unrestrict")} disabled={actionLoading}>
+                  Lift restriction
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleUserAction("suspend")} disabled={actionLoading}>
+                  Suspend
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleUserAction("unsuspend")} disabled={actionLoading}>
+                  Resume
+                </Button>
+              </div>
             </div>
           ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedUser(null)}>
+            <Button variant="outline" onClick={handleCloseDialog}>
               Close
             </Button>
           </DialogFooter>

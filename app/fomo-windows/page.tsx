@@ -9,6 +9,7 @@ import {
   updateFOMOWindow,
   deleteFOMOWindow,
   getFOMOWindowAnalytics,
+  sendNotification,
 } from "@/lib/api"
 import { toast } from "sonner"
 import {
@@ -23,6 +24,13 @@ import {
 const toIsoDate = (value: string) => {
   const date = new Date(`${value}T00:00:00`)
   return date.toISOString()
+}
+
+const isDurationValid = (start: string, end: string) => {
+  const diff = new Date(end).getTime() - new Date(start).getTime()
+  const min = 5 * 60 * 1000
+  const max = 48 * 60 * 60 * 1000
+  return diff >= min && diff <= max
 }
 
 export default function FOMOWindowsPage() {
@@ -93,6 +101,10 @@ export default function FOMOWindowsPage() {
       toast.error("Title, start date, and end date are required")
       return
     }
+    if (!isDurationValid(form.startDate, form.endDate)) {
+      toast.error("Window must be between 5 minutes and 48 hours long")
+      return
+    }
 
     setSaving(true)
     try {
@@ -103,6 +115,11 @@ export default function FOMOWindowsPage() {
         endTime: toIsoDate(form.endDate),
       })
       toast.success("FOMO window created")
+      await sendNotification({
+        title: "New FOMO window",
+        content: `A new FOMO window is open from ${form.startDate} to ${form.endDate}`,
+        targetType: "all",
+      })
       setCreateOpen(false)
       loadWindows()
     } catch (error: any) {
@@ -118,6 +135,10 @@ export default function FOMOWindowsPage() {
       toast.error("Title, start date, and end date are required")
       return
     }
+    if (!isDurationValid(form.startDate, form.endDate)) {
+      toast.error("Window must be between 5 minutes and 48 hours long")
+      return
+    }
 
     setSaving(true)
     try {
@@ -128,6 +149,11 @@ export default function FOMOWindowsPage() {
         endTime: toIsoDate(form.endDate),
       })
       toast.success("FOMO window updated")
+      await sendNotification({
+        title: "FOMO window updated",
+        content: `${form.title} runs from ${form.startDate} to ${form.endDate}`,
+        targetType: "all",
+      })
       setEditOpen(false)
       setActiveWindow(null)
       loadWindows()

@@ -12,7 +12,9 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [targetGroup, setTargetGroup] = useState("all")
+  const [targetType, setTargetType] = useState("all")
+  const [targetValue, setTargetValue] = useState("")
+  const [mediaUrl, setMediaUrl] = useState("")
   const [loading, setLoading] = useState(false)
 
   const loadNotifications = () =>
@@ -29,17 +31,25 @@ export default function NotificationsPage() {
       toast.error("Please fill in title and content")
       return
     }
+    if ((targetType === "group" || targetType === "user") && !targetValue.trim()) {
+      toast.error("Please provide a target group or user id")
+      return
+    }
 
     setLoading(true)
     try {
       await sendNotification({
         title,
         content,
-        targetGroup,
+        targetType,
+        targetValue: targetValue.trim() || undefined,
+        mediaUrl: mediaUrl.trim() || undefined,
       })
       toast.success("Notification sent successfully!")
       setTitle("")
       setContent("")
+      setMediaUrl("")
+      setTargetValue("")
       await loadNotifications()
     } catch (error: any) {
       toast.error(error.message || "Failed to send notification")
@@ -57,17 +67,31 @@ export default function NotificationsPage() {
           <h2 className="text-lg font-bold text-foreground mb-6">Send New Notification</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Target Group</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">Audience</label>
               <select
-                value={targetGroup}
-                onChange={(e) => setTargetGroup(e.target.value)}
+                value={targetType}
+                onChange={(e) => setTargetType(e.target.value)}
                 className="w-full px-4 py-2 border border-border rounded-lg text-sm"
               >
                 <option value="all">All Users</option>
                 <option value="verified">Verified Only</option>
                 <option value="active">Active Users</option>
+                <option value="group">Specific Group</option>
+                <option value="user">Specific User</option>
               </select>
             </div>
+            {(targetType === "group" || targetType === "user") && (
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  {targetType === "group" ? "Group ID" : "User ID"}
+                </label>
+                <Input
+                  placeholder={targetType === "group" ? "Enter group id" : "Enter user id"}
+                  value={targetValue}
+                  onChange={(e) => setTargetValue(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Title</label>
               <Input placeholder="Notification title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -79,6 +103,14 @@ export default function NotificationsPage() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="w-full px-4 py-2 border border-border rounded-lg text-sm min-h-24"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Media URL (optional)</label>
+              <Input
+                placeholder="Attach image/video/audio via URL"
+                value={mediaUrl}
+                onChange={(e) => setMediaUrl(e.target.value)}
               />
             </div>
             <Button onClick={handleSend} disabled={loading} className="w-full">
@@ -94,15 +126,22 @@ export default function NotificationsPage() {
             {notifications.length === 0 ? (
               <p className="text-muted-foreground text-sm">No notifications sent yet</p>
             ) : (
-              notifications.map((notif: any) => (
-                <div key={notif.id} className="p-4 bg-secondary/50 rounded-lg border border-border">
-                  <p className="font-medium text-foreground">{notif.title}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{notif.content}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Delivered to {notif.deliveredCount.toLocaleString()} users
-                  </p>
-                </div>
-              ))
+                notifications.map((notif: any) => (
+                  <div key={notif.id} className="p-4 bg-secondary/50 rounded-lg border border-border">
+                    <p className="font-medium text-foreground">{notif.title}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{notif.content}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Audience: {notif.targetType || notif.targetGroup}
+                      {notif.targetValue ? ` (${notif.targetValue})` : ""}
+                    </p>
+                    {notif.mediaUrl ? (
+                      <p className="text-xs text-primary mt-1 break-all">Media: {notif.mediaUrl}</p>
+                    ) : null}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Delivered to {notif.deliveredCount.toLocaleString()} users
+                    </p>
+                  </div>
+                ))
             )}
           </div>
         </div>

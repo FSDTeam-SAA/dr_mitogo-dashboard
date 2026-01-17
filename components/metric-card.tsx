@@ -6,11 +6,27 @@ interface MetricCardProps {
   icon: string
   trend: string
   trendUp: boolean
+  onClick?: () => void
 }
 
-export default function MetricCard({ label, value, icon, trend, trendUp }: MetricCardProps) {
+export default function MetricCard({ label, value, icon, trend, trendUp, onClick }: MetricCardProps) {
+  const clickable = typeof onClick === "function";
   return (
-    <div className="bg-white rounded-lg border border-border p-6 hover:shadow-md transition-shadow">
+    <div
+      className={`bg-white rounded-lg border border-border p-6 hover:shadow-md transition-shadow ${
+        clickable ? "cursor-pointer ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/40" : ""
+      }`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!clickable) return
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onClick?.()
+        }
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-sm text-muted-foreground mb-2">{label}</p>
