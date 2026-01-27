@@ -100,6 +100,9 @@ export interface VerificationRequest {
   type: string;
   submittedAt: string;
   status: string;
+  idType?: string | null;
+  workDetails?: { company?: string | null; position?: string | null } | null;
+  schoolDetails?: { name?: string | null; email?: string | null } | null;
 }
 
 export interface AdCampaign {
@@ -750,6 +753,10 @@ export async function getVerificationRequests(status?: string) {
       displayName: string;
       createdAt: string;
       status: string;
+      verificationType?: string;
+      idType?: string | null;
+      workDetails?: { company?: string | null; position?: string | null } | null;
+      schoolDetails?: { name?: string | null; email?: string | null } | null;
       id_front?: string;
       id_back?: string;
       selfie?: string;
@@ -761,9 +768,12 @@ export async function getVerificationRequests(status?: string) {
     id: request.id,
     displayName: request.displayName || "-",
     email: request.email,
-    type: "Verification Badge",
+    type: request.verificationType || "Profile",
     submittedAt: new Date(request.createdAt).toISOString().split("T")[0],
     status: request.status,
+    idType: request.idType,
+    workDetails: request.workDetails || null,
+    schoolDetails: request.schoolDetails || null,
     documents: {
       id_front: request.id_front,
       id_back: request.id_back,
@@ -848,6 +858,10 @@ export async function getVerificationRequestDetails(id: string) {
     avatar?: string;
     email: string;
     displayName: string;
+    verificationType?: string;
+    idType?: string | null;
+    workDetails?: { company?: string | null; position?: string | null } | null;
+    schoolDetails?: { name?: string | null; email?: string | null } | null;
     id_front?: string;
     id_back?: string;
     selfie?: string;

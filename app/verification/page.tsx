@@ -72,18 +72,22 @@ export default function VerificationPage() {
   }
 
   const openDetails = async (request: any) => {
-    setSelected(request)
-    if (!request.documents?.id_front && !request.documents?.id_back && !request.documents?.selfie) {
-      setDetailLoading(true)
-      try {
-        const details = await getVerificationRequestDetails(request.id)
-        setSelected({
-          ...request,
-          documents: { id_front: details.id_front, id_back: details.id_back, selfie: details.selfie },
-        })
-      } catch (error: any) {
-        toast.error(error.message || "Failed to load documents")
-      } finally {
+      setSelected(request)
+      if (!request.documents?.id_front && !request.documents?.id_back && !request.documents?.selfie) {
+        setDetailLoading(true)
+        try {
+          const details = await getVerificationRequestDetails(request.id)
+          setSelected({
+            ...request,
+            type: details.verificationType || request.type,
+            idType: details.idType || request.idType,
+            workDetails: (details as any).workDetails || request.workDetails,
+            schoolDetails: (details as any).schoolDetails || request.schoolDetails,
+            documents: { id_front: details.id_front, id_back: details.id_back, selfie: details.selfie },
+          })
+        } catch (error: any) {
+          toast.error(error.message || "Failed to load documents")
+        } finally {
         setDetailLoading(false)
       }
     }
@@ -194,6 +198,18 @@ export default function VerificationPage() {
                   <p className="text-muted-foreground">Status</p>
                   <p className="font-medium text-foreground">{statusLabel(selected.status)}</p>
                 </div>
+                <div>
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium text-foreground">
+                    {(selected.type || selected.verificationType || "Profile").toString()}
+                  </p>
+                </div>
+                {selected.idType ? (
+                  <div>
+                    <p className="text-muted-foreground">ID Type</p>
+                    <p className="font-medium text-foreground">{selected.idType}</p>
+                  </div>
+                ) : null}
               </div>
 
               {detailLoading ? (
@@ -220,6 +236,23 @@ export default function VerificationPage() {
                   )}
                   {!selected.documents?.id_front && !selected.documents?.id_back && !selected.documents?.selfie ? (
                     <p className="col-span-3 text-muted-foreground">No documents attached.</p>
+                  ) : null}
+                </div>
+              )}
+              {(selected.workDetails || selected.schoolDetails) && (
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-xs font-semibold text-muted-foreground">Additional details</p>
+                  {selected.workDetails ? (
+                    <div className="mt-1 text-sm text-foreground">
+                      <div>Company: {selected.workDetails.company || "—"}</div>
+                      <div>Position: {selected.workDetails.position || "—"}</div>
+                    </div>
+                  ) : null}
+                  {selected.schoolDetails ? (
+                    <div className="mt-1 text-sm text-foreground">
+                      <div>School: {selected.schoolDetails.name || "—"}</div>
+                      <div>Email: {selected.schoolDetails.email || "—"}</div>
+                    </div>
                   ) : null}
                 </div>
               )}
