@@ -23,8 +23,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-const toIsoDate = (value: string) => {
-  const date = new Date(`${value}T00:00:00`)
+const toIsoDateTime = (value: string) => {
+  const date = new Date(value)
   return date.toISOString()
 }
 
@@ -62,8 +62,8 @@ export default function FOMOWindowsPage() {
       await createFOMOWindow({
         title: form.title.trim(),
         description: form.description.trim(),
-        startTime: toIsoDate(form.startDate),
-        endTime: toIsoDate(form.endDate),
+        startTime: toIsoDateTime(form.startDate),
+        endTime: toIsoDateTime(form.endDate),
         maxPostsPerUser: form.maxPostsPerUser ? Number(form.maxPostsPerUser) : null,
       })
       await sendNotification({
@@ -86,8 +86,8 @@ export default function FOMOWindowsPage() {
       await updateFOMOWindow(id, {
         title: form.title.trim(),
         description: form.description.trim(),
-        startTime: toIsoDate(form.startDate),
-        endTime: toIsoDate(form.endDate),
+        startTime: toIsoDateTime(form.startDate),
+        endTime: toIsoDateTime(form.endDate),
         maxPostsPerUser: form.maxPostsPerUser ? Number(form.maxPostsPerUser) : null,
       })
       await sendNotification({
@@ -303,18 +303,18 @@ export default function FOMOWindowsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Start Date</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">Start Date & Time</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="w-full rounded-lg border border-border px-4 py-2 text-sm"
                   value={form.startDate}
                   onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">End Date</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">End Date & Time</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="w-full rounded-lg border border-border px-4 py-2 text-sm"
                   value={form.endDate}
                   onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}
@@ -374,18 +374,18 @@ export default function FOMOWindowsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Start Date</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">Start Date & Time</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="w-full rounded-lg border border-border px-4 py-2 text-sm"
                   value={form.startDate}
                   onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">End Date</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">End Date & Time</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="w-full rounded-lg border border-border px-4 py-2 text-sm"
                   value={form.endDate}
                   onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}

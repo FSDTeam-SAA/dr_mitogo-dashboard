@@ -211,12 +211,20 @@ export default function SupportPage() {
               {selectedTicket.attachments?.length ? (
                 <div className="space-y-2">
                   <p className="text-muted-foreground">Attachments</p>
-                  <div className="space-y-1">
-                    {selectedTicket.attachments.map((file: string, idx: number) => (
-                      <a key={idx} href={file} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
-                        Attachment {idx + 1}
-                      </a>
-                    ))}
+                  <div className="space-y-3">
+                    {selectedTicket.attachments.map((file: string, idx: number) => {
+                      const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(file)
+                      return (
+                        <div key={idx} className="rounded border border-border p-2">
+                          <a href={file} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                            Attachment {idx + 1}
+                          </a>
+                          {isImage ? (
+                            <img src={file} alt={`Attachment ${idx + 1}`} className="mt-2 max-h-48 w-full rounded object-contain" />
+                          ) : null}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               ) : null}

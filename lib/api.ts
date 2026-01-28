@@ -549,6 +549,20 @@ export async function getGhostNames(): Promise<GhostNameEntry[]> {
   return response.data;
 }
 
+export async function getGhostTimeWindow() {
+  const response = await apiRequest<{ ghostTime: { startTime: string; endTime: string; isEnabled: boolean } }>(
+    "/ghost/get-ghost-time"
+  );
+  return response.ghostTime;
+}
+
+export async function setGhostTimeWindow(payload: { startTime: string; endTime: string; isEnabled?: boolean }) {
+  return apiRequest("/ghost/set-ghost-time", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function updateGhostNameStatus(name: string, status: GhostNameEntry["status"]) {
   return apiRequest(`/ghost/admin/names/${encodeURIComponent(name)}`, {
     method: "PATCH",
@@ -569,12 +583,17 @@ export async function getFOMOWindows() {
     }>;
   }>("/fomo/admin/windows");
 
+  const toLocalInput = (value: string) => {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 16);
+  };
+
   return response.data.map((window) => ({
     id: window.id,
     name: window.title,
     status: window.status,
-    startDate: new Date(window.startTime).toISOString().split("T")[0],
-    endDate: new Date(window.endTime).toISOString().split("T")[0],
+    startDate: toLocalInput(window.startTime),
+    endDate: toLocalInput(window.endTime),
     postsCreated: window.stats?.postCount || 0,
     usersParticipated: window.stats?.participantCount || 0,
     description: window.description || "",

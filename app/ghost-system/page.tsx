@@ -5,7 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Skeleton, TableSkeleton } from "@/components/skeleton"
-import { getGhostPosts, getGhostSummary, getGhostInsights, getGhostNames, updateGhostNameStatus } from "@/lib/api"
+import {
+  getGhostPosts,
+  getGhostSummary,
+  getGhostInsights,
+  getGhostNames,
+  getGhostTimeWindow,
+  setGhostTimeWindow,
+  updateGhostNameStatus,
+} from "@/lib/api"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -24,12 +32,44 @@ export default function GhostSystemPage() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [selectedPost, setSelectedPost] = useState<any | null>(null)
+  const [ghostForm, setGhostForm] = useState({ start: "", end: "", enabled: true })
 
   const pageSize = 10
 
   const summaryQuery = useQuery({
     queryKey: ["ghost-summary"],
     queryFn: getGhostSummary,
+  })
+
+  const ghostTimeQuery = useQuery({
+    queryKey: ["ghost-time"],
+    queryFn: getGhostTimeWindow,
+    onSuccess: (data: any) => {
+      if (!data) return
+      const toLocal = (value: string) => {
+        const d = new Date(value)
+        return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 16)
+      }
+      setGhostForm({
+        start: toLocal(data.startTime),
+        end: toLocal(data.endTime),
+        enabled: data.isEnabled ?? true,
+      })
+    },
+  })
+
+  const ghostTimeMutation = useMutation({
+    mutationFn: () =>
+      setGhostTimeWindow({
+        startTime: new Date(ghostForm.start).toISOString(),
+        endTime: new Date(ghostForm.end).toISOString(),
+        isEnabled: ghostForm.enabled,
+      }),
+    onSuccess: () => {
+      toast.success("Ghost posting window updated")
+      queryClient.invalidateQueries({ queryKey: ["ghost-time"] })
+    },
+    onError: (error: any) => toast.error(error?.message || "Failed to update ghost time"),
   })
 
   const insightsQuery = useQuery({
@@ -91,6 +131,58 @@ export default function GhostSystemPage() {
       <Header title="Ghost System" description="Anonymous posts and ghost interactions" />
 
       <div className="p-8 space-y-6">
+        <div className="rounded-lg border border-border bg-white p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Ghost Post Time Window</h3>
+              <p className="text-sm text-muted-foreground">Control when ghost posts are allowed.</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => ghostTimeQuery.refetch()}>
+              Refresh
+            </Button>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Start</label>
+              <input
+                type="datetime-local"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                value={ghostForm.start}
+                onChange={(e) => setGhostForm((prev) => ({ ...prev, start: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">End</label>
+              <input
+                type="datetime-local"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                value={ghostForm.end}
+                onChange={(e) => setGhostForm((prev) => ({ ...prev, end: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Status</label>
+              <select
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                value={ghostForm.enabled ? "enabled" : "disabled"}
+                onChange={(e) => setGhostForm((prev) => ({ ...prev, enabled: e.target.value === "enabled" }))}
+              >
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button
+              onClick={() => ghostTimeMutation.mutate()}
+              disabled={ghostTimeMutation.isPending || !ghostForm.start || !ghostForm.end}
+            >
+              {ghostTimeMutation.isPending ? "Saving..." : "Save Window"}
+            </Button>
+            {ghostTimeQuery.isLoading ? <Skeleton className="h-5 w-20" /> : null}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {["totalGhostPosts", "activeThisHour", "avgEngagement"].map((key) => (
             <div key={key} className="rounded-lg border border-border bg-white p-6">
