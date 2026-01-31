@@ -9,6 +9,13 @@ export interface User {
   postsCount: number;
   commentsCount: number;
   verified: boolean;
+  verificationBadges?: {
+    profile?: boolean;
+    work?: boolean;
+    school?: boolean;
+    workDetails?: { company?: string; position?: string };
+    schoolDetails?: { name?: string; email?: string };
+  } | null;
   joinDate: string;
   education?: string;
   work?: string;
@@ -327,6 +334,7 @@ export async function getUserProfile(userId: string) {
     work: user.work || "",
     anonymousId: user.anonymousId || "",
     verified: !!user.isVerified,
+    verificationBadges: user.verificationBadges || null,
     joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "",
   };
 }

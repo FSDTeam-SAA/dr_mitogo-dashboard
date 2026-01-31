@@ -114,6 +114,23 @@ export default function UsersPage() {
       if (["unban", "unsuspend", "unrestrict"].includes(action)) return "active"
       return current
     }
+    const updateBadges = (badges: any) => {
+      const next = {
+        profile: badges?.profile || false,
+        work: badges?.work || false,
+        school: badges?.school || false,
+        ...badges,
+      }
+      if (action === "verify_profile") next.profile = true
+      if (action === "unverify_profile") next.profile = false
+      if (action === "verify_work") next.work = true
+      if (action === "unverify_work") next.work = false
+      if (action === "verify_school") next.school = true
+      if (action === "unverify_school") next.school = false
+      if (action === "verify") next.profile = true
+      if (action === "unverify") next.profile = false
+      return next
+    }
 
     queryClient.setQueriesData<UsersResponse>({ queryKey: ["users"] }, (existing) => {
       if (!existing) return existing
@@ -125,6 +142,7 @@ export default function UsersPage() {
                 ...user,
                 status: deriveStatus(user.status),
                 verified: action === "verify" ? true : action === "unverify" ? false : user.verified,
+                verificationBadges: updateBadges(user.verificationBadges),
               }
             : user
         ),
@@ -137,6 +155,7 @@ export default function UsersPage() {
             ...prev,
             status: deriveStatus(prev.status),
             verified: action === "verify" ? true : action === "unverify" ? false : prev.verified,
+            verificationBadges: updateBadges(prev.verificationBadges),
           }
         : prev
     )
@@ -334,6 +353,24 @@ export default function UsersPage() {
                   <p className="font-medium text-foreground">{selectedUserProfile?.verified ? "Yes" : "No"}</p>
                 </div>
                 <div>
+                  <p className="text-muted-foreground">Profile Badge</p>
+                  <p className="font-medium text-foreground">
+                    {selectedUserProfile?.verificationBadges?.profile ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">School Badge</p>
+                  <p className="font-medium text-foreground">
+                    {selectedUserProfile?.verificationBadges?.school ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Work Badge</p>
+                  <p className="font-medium text-foreground">
+                    {selectedUserProfile?.verificationBadges?.work ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div>
                   <p className="text-muted-foreground">Ghost Name</p>
                   <p className="font-medium text-foreground">{selectedUserProfile?.anonymousId || "-"}</p>
                 </div>
@@ -361,6 +398,40 @@ export default function UsersPage() {
               <div className="grid grid-cols-2 gap-2">
                 <Button size="sm" onClick={() => handleUserAction(selectedUser.verified ? "unverify" : "verify")} disabled={statusMutation.isPending}>
                   {selectedUser.verified ? "Remove verification" : "Verify user"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={selectedUserProfile?.verificationBadges?.profile ? "default" : "outline"}
+                  onClick={() =>
+                    handleUserAction(
+                      selectedUserProfile?.verificationBadges?.profile ? "unverify_profile" : "verify_profile"
+                    )
+                  }
+                  disabled={statusMutation.isPending}
+                >
+                  {selectedUserProfile?.verificationBadges?.profile ? "Unverify profile" : "Verify profile"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={selectedUserProfile?.verificationBadges?.school ? "default" : "outline"}
+                  onClick={() =>
+                    handleUserAction(
+                      selectedUserProfile?.verificationBadges?.school ? "unverify_school" : "verify_school"
+                    )
+                  }
+                  disabled={statusMutation.isPending}
+                >
+                  {selectedUserProfile?.verificationBadges?.school ? "Unverify school" : "Verify school"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={selectedUserProfile?.verificationBadges?.work ? "default" : "outline"}
+                  onClick={() =>
+                    handleUserAction(selectedUserProfile?.verificationBadges?.work ? "unverify_work" : "verify_work")
+                  }
+                  disabled={statusMutation.isPending}
+                >
+                  {selectedUserProfile?.verificationBadges?.work ? "Unverify work" : "Verify work"}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => handleUserAction("ban")} disabled={statusMutation.isPending}>
                   Ban account
